@@ -239,8 +239,8 @@
 
   /* ---------- старт ---------- */
   netState();
-  if (!api || !api.configured) { gate('Сканер не настроен: не указан адрес сервера (config.js).'); return; }
-  staffKey = readKey();
+  staffKey = readKey(); // ключ сохраняем сразу, даже если адрес сервера ещё не подтянулся
+  if (!api || !api.configured) { gate('Сканер не настроен: не указан адрес сервера (config.js). Обновите страницу через минуту.'); return; }
   if (!staffKey) { gate('Откройте персональную ссылку сканера, которую прислал организатор.'); $('manual-open').hidden = true; return; }
   initDetector().then(function (d) { detector = d; });
   loadInfo();
