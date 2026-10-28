@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Испытание одновременных сканирований</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Arial,sans-serif;margin:0;padding:16px;max-width:720px;margin:auto;color:#222}
+    h1{font-size:20px;color:#a52721}
+    textarea{width:100%;height:110px;font:13px monospace}
+    button{font:inherit;font-weight:700;padding:12px 16px;border:0;border-radius:10px;background:#a52721;color:#fff;margin:6px 6px 6px 0}
+    pre{background:#f5f0ea;padding:12px;border-radius:10px;white-space:pre-wrap;font-size:13px}
+    .pass{color:#1f7a45;font-weight:800}.fail{color:#b3261e;font-weight:800}
+  </style>
+</head>
+<body>
+<h1>Испытание P0-5: одновременное сканирование</h1>
+<p>Только для тестового режима (TEST_MODE = TRUE). Вставьте ключи сканеров (часть ссылки после <code>#k=</code>), по одному в строке — минимум 2, лучше 4 разных резидента.</p>
+<textarea id="keys" placeholder="ключ1&#10;ключ2&#10;ключ3&#10;ключ4"></textarea>
+<div>
+  <button id="race">1. Один купон × 12 одновременных сканов</button>
+  <button id="burst">2. 10 купонов × параллельная выдача</button>
+</div>
+<pre id="out">Готово к запуску.</pre>
+<script src="config.js?v=2.2"></script>
+<script src="api.js?v=2.2"></script>
+<script>
+(function(){
+  var out=document.getElementById('out');
+  function log(s){out.innerHTML+= '\n'+s}
+  function keys(){return document.getElementById('keys').value.split(/\s+/).map(function(x){return x.replace(/^.*#k=/,'').trim()}).filter(Boolean)}
+  function t(){return performance.now()}
+  document.getElementById('race').onclick=async function(){
+    var k=keys(); if(k.length<2){alert('Нужно минимум 2 ключа');return}
+    out.textContent='Выпускаем купон…';
+    var c=await TropaAPI.call('issue',{device:'race'}); if(!c.ok){log('Ошибка выпуска: '+c.error);return}
+    log('Купон '+c.couponId+'. Отправляем 12 одновременных запросов погашения с '+k.length+' сканеров…');
+    var t0=t();
+    var reqs=[];for(var i=0;i<12;i++){(function(i){var s=t();reqs.push(TropaAPI.call('redeem',{staffKey:k[i%k.length],payload:c.qr},{timeout:60000}).then(function(r){return {i:i,ms:Math.round(t()-s),r:r}},function(e){return {i:i,ms:Math.round(t()-s),r:{result:'NETWORK'}}}))})(i)}
+    var res=await Promise.all(reqs);
+    var okN=res.filter(function(x){return x.r.result==='OK'}).length;
+    res.forEach(function(x){log('#'+x.i+' сканер '+(x.i%k.length+1)+': '+x.r.result+' '+(x.r.reason||'')+' · '+x.ms+' мс')});
+    var st=await TropaAPI.call('status',{token:c.token});
+    log('\nСтатус купона на сервере: '+st.status+' ('+(st.residentName||'')+')');
+    log('Всего '+Math.round(t()-t0)+' мс');
+    log(okN===1?'<span class="pass">ПРОЙДЕНО: ровно одна успешная выдача из 12.</span>':'<span class="fail">ПРОВАЛ: успешных выдач '+okN+' (должна быть ровно 1). ОСТАНОВИТЬ ЗАПУСК.</span>');
+    log('Проверьте в таблице: меню «Тропа единства» → «Проверить целостность учёта».');
+  };
+  document.getElementById('burst').onclick=async function(){
+    var k=keys(); if(k.length<1){alert('Нужен минимум 1 ключ');return}
+    out.textContent='Выпускаем 10 купонов параллельно…';
+    var t0=t();
+    var cs=await Promise.all(Array.from({length:10},function(){return TropaAPI.call('issue',{device:'burst'},{timeout:60000}).catch(function(){return {ok:false,error:'NETWORK'}})}));
+    var good=cs.filter(function(c){return c.ok});
+    log('Выпущено '+good.length+'/10 за '+Math.round(t()-t0)+' мс');
+    t0=t();
+    var res=await Promise.all(good.map(function(c,i){var s=t();return TropaAPI.call('redeem',{staffKey:k[i%k.length],payload:c.qr},{timeout:60000}).then(function(r){return {r:r,ms:Math.round(t()-s)}},function(){return {r:{result:'NETWORK'},ms:Math.round(t()-s)}})}));
+    var ms=res.map(function(x){return x.ms}).sort(function(a,b){return a-b});
+    var by={};res.forEach(function(x){var key=x.r.result+(x.r.reason&&x.r.reason!=='OK'?':'+x.r.reason:'');by[key]=(by[key]||0)+1});
+    log('Погашение '+good.length+' разных купонов одновременно: '+JSON.stringify(by));
+    log('Время ответа: медиана '+ms[Math.floor(ms.length/2)]+' мс, максимум '+ms[ms.length-1]+' мс, всего '+Math.round(t()-t0)+' мс');
+    log('OK + OUT_OF_STOCK должны покрыть все запросы; NETWORK/RETRY допустимы только как «повторите», без выдачи.');
+  };
+})();
+</script>
+</body>
+</html>

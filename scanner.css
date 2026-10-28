@@ -1,0 +1,45 @@
+:root{--red:#a52721;--red-dark:#781d19;--ink:#1f1a17;--cream:#f7f2e8;--ok:#1f7a45;--deny:#b3261e;--wait:#e0a100}
+[hidden]{display:none!important}
+@font-face{font-family:'Century Gothic Web';src:url(fonts/cg.woff2) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Century Gothic Web';src:url(fonts/cg-bold.woff2) format('woff2');font-weight:700 900;font-display:swap}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1d1715;color:#fff;font-family:'Century Gothic Web','Century Gothic',system-ui,-apple-system,'Segoe UI',Arial,sans-serif}
+body{display:flex;flex-direction:column;min-height:100dvh}
+button{font:inherit;cursor:pointer}
+.sc-head{background:var(--red);padding:10px 16px calc(10px);display:flex;align-items:center;gap:12px;padding-top:max(10px,env(safe-area-inset-top))}
+.sc-logo{height:34px;width:auto}
+.sc-who{min-width:0;flex:1;text-align:right}
+.sc-resident{font-weight:800;font-size:17px;line-height:1.15;overflow:hidden;text-overflow:ellipsis}
+.sc-counter{font-size:13px;opacity:.9}
+.sc-net{background:var(--wait);color:#111;font-weight:800;text-align:center;padding:8px 12px}
+.sc-main{flex:1;display:flex;flex-direction:column;min-height:0}
+.sc-gate{flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px;padding:24px 20px;text-align:center}
+.sc-gate-text{font-size:18px;line-height:1.45;margin:0;white-space:pre-line}
+.sc-btn{min-height:56px;border:0;border-radius:14px;background:#fff;color:var(--red-dark);font-weight:800;font-size:18px;padding:12px 18px;width:100%}
+.sc-btn-light{background:transparent;color:#fff;border:2px solid #ffffff88}
+.sc-cam{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px 14px 6px;position:relative}
+.sc-video-wrap{position:relative;width:min(100%,460px);aspect-ratio:1/1;border-radius:18px;overflow:hidden;background:#000}
+.sc-video-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.sc-frame{position:absolute;inset:14%;border:4px solid #ffffffcc;border-radius:16px;box-shadow:0 0 0 999px #00000040}
+.sc-hint{margin:0;font-size:19px;font-weight:800;text-align:center}
+.sc-toast{position:absolute;left:16px;right:16px;bottom:10px;background:#000c;border-radius:12px;padding:12px;text-align:center;font-weight:700}
+.sc-foot{display:flex;justify-content:center;gap:10px;padding:6px 12px max(14px,env(safe-area-inset-bottom))}
+.sc-link{background:none;border:0;color:#fff;text-decoration:underline;font-size:16px;min-height:48px;padding:8px 14px}
+.sc-manual{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}
+.sc-manual-box{background:#fff;color:var(--ink);border-radius:16px;padding:20px;width:min(100%,420px);display:flex;flex-direction:column;gap:12px}
+.sc-manual-box label{font-weight:800}
+.sc-manual-box input{font:700 28px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;padding:12px;border:2px solid #c9b8a8;border-radius:12px;width:100%;text-align:center}
+.sc-manual-box .sc-btn{background:var(--red);color:#fff}
+.sc-manual-box .sc-btn-light{background:#eee;color:var(--ink);border:0}
+.sc-result{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
+.sc-result[data-kind=ok]{background:var(--ok)}
+.sc-result[data-kind=deny]{background:var(--deny)}
+.sc-result[data-kind=retry]{background:var(--wait);color:#111}
+.sc-result[data-kind=busy]{background:#3b3330}
+.sc-result-icon{font-size:110px;line-height:1;font-weight:900}
+.sc-result-title{font-size:clamp(30px,9vw,46px);font-weight:900;line-height:1.05;letter-spacing:.01em}
+.sc-result-text{font-size:20px;line-height:1.4;max-width:30ch;font-weight:600}
+.sc-result-bar{position:absolute;left:0;right:0;bottom:0;height:10px;background:#0003}
+.sc-result-bar span{display:block;height:100%;width:0;background:#fffb}
+.sc-result[data-kind=busy] .sc-result-bar{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

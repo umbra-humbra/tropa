@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#a52721">
+  <meta name="robots" content="noindex">
+  <title>Проверка связи · Тропа единства</title>
+  <style>
+    :root{--red:#a52721}
+    body{margin:0;font-family:'Century Gothic',system-ui,-apple-system,Arial,sans-serif;background:#fffdf8;color:#29231f}
+    header{background:var(--red);color:#fff;padding:14px 16px;font-weight:800;font-size:18px}
+    main{padding:16px;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+    .row{border:1px solid #e1d4c4;border-radius:12px;padding:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:16px}
+    .v{font-weight:800;text-align:right}
+    .ok{color:#1f7a45}.bad{color:#b3261e}.wait{color:#8a6a00}
+    button,select{font:inherit;min-height:52px;border-radius:12px;font-size:17px}
+    button{border:0;background:var(--red);color:#fff;font-weight:800}
+    select{border:1px solid #c9b8a8;padding:0 10px;background:#fff}
+    .big{font-size:22px;font-weight:900;text-align:center;padding:16px;border-radius:12px}
+    .big.ok{background:#e5f3ea}.big.bad{background:#fbe7e5}
+    small{color:#746a60}
+    video{width:100%;border-radius:12px;background:#000;display:none}
+  </style>
+</head>
+<body>
+<header>Проверка связи для сканера</header>
+<main>
+  <p style="margin:0">Откройте эту страницу на телефоне <b>с мобильным интернетом (Wi-Fi выключен)</b>, прямо на площадке. Сделайте скриншот результата и пришлите организатору.</p>
+  <select id="op" aria-label="Оператор">
+    <option value="">Выберите оператора…</option><option>МТС</option><option>Билайн</option><option>МегаФон</option><option>Т2 (Tele2)</option><option>Yota</option><option>Другой</option>
+  </select>
+  <div class="row"><span>Сайт игры</span><span class="v ok">открылся ✓</span></div>
+  <div class="row"><span>Сервер купонов</span><span id="srv" class="v wait">проверяем…</span></div>
+  <div class="row"><span>Время ответа</span><span id="ms" class="v">—</span></div>
+  <div class="row"><span>Камера</span><span id="camv" class="v">не проверена</span></div>
+  <div id="verdict" class="big">…</div>
+  <button type="button" id="again">Проверить ещё раз</button>
+  <button type="button" id="cam" style="background:#5a4a40">Проверить камеру</button>
+  <video id="v" playsinline muted></video>
+  <small id="meta"></small>
+</main>
+<script src="config.js?v=2.2"></script>
+<script src="api.js?v=2.2"></script>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var camOk=null;
+  function set(id,cls,txt){var e=$(id);e.className='v '+cls;e.textContent=txt}
+  function verdict(srvOk,median){
+    var v=$('verdict');
+    if(srvOk&&median<4000){v.className='big ok';v.textContent='СВЯЗЬ ЕСТЬ — сканер будет работать'}
+    else if(srvOk){v.className='big bad';v.textContent='Связь очень медленная ('+(median/1000).toFixed(1)+' с)'}
+    else{v.className='big bad';v.textContent='НЕТ СВЯЗИ С СЕРВЕРОМ'}
+    $('meta').textContent=new Date().toLocaleString('ru-RU')+' · '+($('op').value||'оператор не выбран')+' · '+navigator.userAgent;
+  }
+  function run(){
+    set('srv','wait','проверяем…');$('ms').textContent='—';$('verdict').className='big';$('verdict').textContent='…';
+    if(!window.TropaAPI.configured){set('srv','bad','не настроен');verdict(false,0);return}
+    var times=[],ok=0,i=0;
+    (function next(){
+      if(i++>=3){
+        times.sort(function(a,b){return a-b});
+        var med=times.length?times[Math.floor(times.length/2)]:0;
+        set('srv',ok?'ok':'bad',ok?('доступен ✓ ('+ok+'/3)'):'недоступен ✕');
+        $('ms').textContent=times.length?(med/1000).toFixed(1)+' с':'—';
+        verdict(ok>0,med);return;
+      }
+      var t=Date.now();
+      window.TropaAPI.call('ping',{}, {timeout:15000}).then(function(r){if(r&&r.pong){ok++;times.push(Date.now()-t)}},function(){}).then(next);
+    })();
+  }
+  $('again').onclick=run;
+  $('cam').onclick=function(){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){set('camv','bad','недоступна ✕');return}
+    navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}}).then(function(s){
+      var v=$('v');v.srcObject=s;v.style.display='block';v.play();set('camv','ok','работает ✓');
+      setTimeout(function(){s.getTracks().forEach(function(t){t.stop()});v.style.display='none'},4000);
+    },function(e){set('camv','bad',(e&&e.name==='NotAllowedError')?'нет разрешения ✕':'ошибка ✕')});
+  };
+  run();
+})();
+</script>
+</body>
+</html>
