@@ -38,9 +38,9 @@
 
   var ISSUE_ERRORS = {
     NOT_STARTED: 'Подарочные купоны начнут выдавать в дни акции. Загляни в игру ещё раз в дни акции — прогресс сохранится.',
-    CLOSED: 'Акция завершена: подарочные купоны больше не выпускаются. Спасибо, что прошёл квест!',
-    LIMIT: 'Подарочные купоны закончились. Спасибо, что прошёл квест!',
-    STOPPED: 'Сейчас подарочные купоны не выдаются. Спасибо, что прошёл квест!',
+    CLOSED: 'Акция завершена: подарочные купоны больше не выпускаются. Спасибо за игру!',
+    LIMIT: 'Подарочные купоны закончились. Спасибо за игру!',
+    STOPPED: 'Сейчас подарочные купоны не выдаются. Спасибо за игру!',
     BUSY: 'Сервер сейчас занят. Подожди несколько секунд и нажми «Повторить».',
     NETWORK: 'Не удалось получить купон: нет связи с сервером. Проверь интернет и нажми «Повторить».',
     SERVER_ERROR: 'Сервер ответил ошибкой. Нажми «Повторить» чуть позже.'
@@ -70,7 +70,7 @@
       return '<div class="coupon-box" role="status" aria-busy="true"><strong class="coupon-title">Подарочный купон</strong><p class="coupon-sub">Выпускаем твой купон…</p><div class="coupon-spinner" aria-hidden="true"></div></div>';
     }
     if (c.status === 'redeemed') {
-      return '<div class="coupon-box coupon-done" role="status"><div class="coupon-stamp" aria-hidden="true">✓</div><strong class="coupon-title">Подарок получен</strong>' +
+      return '<div class="coupon-box coupon-done" role="status"><div class="coupon-stamp" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><strong class="coupon-title">Подарок получен</strong>' +
         '<p>' + h(c.residentName || '') + (c.gift ? ' · ' + h(c.gift) : '') + '</p><p class="coupon-sub">' + h(fmtTime(c.redeemedAt)) + '</p>' +
         '<p class="coupon-fine">Купон № ' + h(c.couponId) + ' использован. Спасибо за участие!</p></div>';
     }

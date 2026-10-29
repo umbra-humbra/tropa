@@ -75,8 +75,8 @@ function setupSheets_(ss) {
     res.getRange('E2:E5').insertCheckboxes();
     res.getRange('E2:E5').setValue(true);
     for (var r = 2; r <= 5; r++) {
-      res.getRange(r, 6).setFormula('=COUNTIFS(\'' + SH.REDEMPTIONS + '\'!C:C;A' + r + ';\'' + SH.REDEMPTIONS + '\'!F:F;"OK")'.replace(/;/g, ','));
-      res.getRange(r, 7).setFormula('=IF(D' + r + '="","без лимита",D' + r + '-F' + r + ')');
+      res.getRange(r, 6).setFormula(fx_(ss, '=COUNTIFS(\'' + SH.REDEMPTIONS + '\'!C:C;A' + r + ';\'' + SH.REDEMPTIONS + '\'!F:F;"OK")'));
+      res.getRange(r, 7).setFormula(fx_(ss, '=IF(D' + r + '="";"без лимита";D' + r + '-F' + r + ')'));
     }
   }
   ensure(SH.COUPONS, ['coupon_id', 'token_hash', 'code_hash', 'Выпущен', 'Действует до', 'Статус', 'Резидент', 'Погашен', 'Сотрудник', 'Источник'], [90, 120, 120, 140, 140, 80, 100, 140, 80, 120]);
@@ -87,9 +87,9 @@ function setupSheets_(ss) {
   if (sum.getLastRow() === 1) {
     sum.getRange(2, 1, 5, 2).setValues([
       ['Купонов выпущено', '=COUNTA(\'' + SH.COUPONS + '\'!A2:A)'],
-      ['Купонов погашено', '=COUNTIF(\'' + SH.COUPONS + '\'!F2:F,"redeemed")'],
-      ['Выдач в журнале (OK)', '=COUNTIF(\'' + SH.REDEMPTIONS + '\'!F2:F,"OK")'],
-      ['Выдано по резидентам', '=JOIN(" · ",ARRAYFORMULA(FILTER(\'' + SH.RESIDENTS + '\'!B2:B&": "&\'' + SH.RESIDENTS + '\'!F2:F,\'' + SH.RESIDENTS + '\'!A2:A<>"")))'],
+      ['Купонов погашено', fx_(ss, '=COUNTIF(\'' + SH.COUPONS + '\'!F2:F;"redeemed")')],
+      ['Выдач в журнале (OK)', fx_(ss, '=COUNTIF(\'' + SH.REDEMPTIONS + '\'!F2:F;"OK")')],
+      ['Выдано по резидентам', fx_(ss, '=JOIN(" · ";FILTER(\'' + SH.RESIDENTS + '\'!B2:B&": "&\'' + SH.RESIDENTS + '\'!F2:F;\'' + SH.RESIDENTS + '\'!A2:A<>""))')],
       ['Выдача остановлена (стоп-кран)', '=\'' + SH.SETTINGS + '\'!B2']
     ]);
   }
@@ -100,6 +100,11 @@ function setupSheets_(ss) {
   });
   var def = ss.getSheetByName('Лист1') || ss.getSheetByName('Sheet1');
   if (def && def.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(def);
+}
+
+/** Разделитель аргументов формул зависит от языка таблицы: в русской — «;», в английской — «,». */
+function fx_(ss, f) {
+  return String(ss.getSpreadsheetLocale() || '').indexOf('en') === 0 ? f.replace(/;/g, ',') : f;
 }
 
 function adminCreateStaffLink() {
@@ -122,11 +127,18 @@ function adminCreateStaffLink() {
   if (site.slice(-1) !== '/') site += '/';
   var url = site + 'scanner.html#k=' + key;
   var html = HtmlService.createHtmlOutput(
-    '<div style="font:14px Arial">Ссылка для <b>' + residents[rid].name + '</b> (' + sid + '). ' +
-    'Отправьте её сотруднику лично. Ссылка показывается один раз — в таблице хранится только хэш.<br><br>' +
-    '<textarea style="width:100%;height:80px" onclick="this.select()">' + url + '</textarea><br><br>' +
-    'Чтобы отключить доступ, снимите галочку «Активен» в листе «Сотрудники» (действует в течение минуты).</div>'
-  ).setWidth(520).setHeight(260);
+    '<div style="font:14px Arial;text-align:center">' +
+    '<b>' + residents[rid].name + '</b> · ' + sid + '<br>' +
+    'Сотрудник наводит камеру своего телефона на этот QR-код и открывает ссылку.<br><br>' +
+    '<div id="qr" style="width:220px;margin:0 auto"></div><br>' +
+    '<a href="' + url + '" target="_blank" rel="noopener">Открыть сканер на этом компьютере</a><br><br>' +
+    '<textarea style="width:100%;height:56px;font-size:11px" onclick="this.select()">' + url + '</textarea>' +
+    '<p style="font-size:12px;color:#666">Ссылка показывается один раз (в таблице хранится только хэш). ' +
+    'Отключить доступ — снять галочку «Активен» в листе «Сотрудники».</p></div>' +
+    '<script src="' + site + 'vendor/qrcode.js"></script>' +
+    '<script>try{var q=qrcode(0,"M");q.addData(' + JSON.stringify(url) + ');q.make();' +
+    'document.getElementById("qr").innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true});}catch(e){}</script>'
+  ).setWidth(420).setHeight(520);
   ui.showModalDialog(html, 'Ссылка сканера');
 }
 
@@ -172,6 +184,7 @@ function adminIssueManual() {
   var r = ui.prompt('Купон вручную', 'Причина выпуска (обязательно):', ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK || !r.getResponseText().trim()) return;
   var c = createCoupon_(settings_(), 'admin', '');
+  if (!c) { ui.alert('Сервер занят, повторите через несколько секунд.'); return; }
   log_('manual_issue', c.id, Session.getActiveUser().getEmail() || 'admin', 'ISSUED', r.getResponseText().trim());
   ui.alert('Купон ' + c.id + '\n\nКод для гостя: ' + c.codePretty + '\n\nСотрудник вводит этот код в сканере через «Ввести код вручную». Код показывается один раз.');
 }

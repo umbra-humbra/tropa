@@ -97,6 +97,7 @@ function apiIssue_(req) {
     return { ok: false, error: 'LIMIT' };
   }
   var c = createCoupon_(st, 'web', String(req.device || '').slice(0, 12));
+  if (!c) return { ok: false, error: 'BUSY' };
   return {
     ok: true,
     token: c.token, qr: QR_PREFIX + c.token, code: c.codePretty, couponId: c.id,
@@ -172,8 +173,10 @@ function apiRedeem_(req) {
     return deny_('OUTSIDE_HOURS', 'Сейчас подарки не выдаются. ' + rulesText_(st));
   }
 
+  DEFER_LOG = []; // запись журнала — после снятия блокировки, чтобы не задерживать очередь
   var lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) {
+  if (!lock.tryLock(15000)) {
+    flushLog_();
     return { ok: false, result: 'RETRY', reason: 'BUSY', message: 'Сервер занят. Отсканируйте ещё раз.' };
   }
   try {
@@ -186,7 +189,7 @@ function apiRedeem_(req) {
     }
     var v = row.values;
     var couponId = v[C.C_ID - 1];
-    var residents = residents_(true);
+    var residents = residents_(false); // кэш ≤30 с; правки организатора сбрасывают его сразу (onEdit)
 
     if (v[C.C_STATUS - 1] === 'redeemed') {
       var r0 = residents[v[C.C_RES - 1]];
@@ -205,7 +208,7 @@ function apiRedeem_(req) {
       log_('redeem', couponId, staff.id, 'PAUSED', via);
       return deny_('PAUSED', 'Выдача у вас приостановлена организатором. Купон гостя не списан.', { couponId: couponId });
     }
-    var used = usedByResident_()[res.id] || 0;
+    var used = res.quota === null ? null : (usedByResident_()[res.id] || 0); // без лимита журнал под блокировкой не читаем
     if (res.quota !== null && used >= res.quota) {
       log_('redeem', couponId, staff.id, 'OUT_OF_STOCK', via);
       return deny_('OUT_OF_STOCK', 'Ваши подарки закончились. Купон гостя НЕ списан — он может получить подарок у другого резидента.', { couponId: couponId });
@@ -219,14 +222,16 @@ function apiRedeem_(req) {
     cache.remove('cs:' + v[C.C_TOKEN - 1]);
     cache.remove('offers');
     cache.remove('used');
-    log_('redeem', couponId, staff.id, 'OK', via);
-    return {
+    var okResult = {
       ok: true, result: 'OK', reason: 'OK', couponId: couponId,
-      message: res.gift, residentName: res.name, used: used + 1, quota: res.quota
+      message: res.gift, residentName: res.name, used: used === null ? null : used + 1, quota: res.quota
     };
   } finally {
     lock.releaseLock();
+    flushLog_();
   }
+  if (okResult.used === null) okResult.used = usedByResident_()[staff.residentId] || 0; // счётчик для экрана — уже вне блокировки
+  return okResult;
 }
 
 function deny_(reason, message, extra) {
@@ -238,18 +243,27 @@ function deny_(reason, message, extra) {
 /* ============================ Логика ============================ */
 
 function createCoupon_(st, source, note) {
-  var shC = sheet_(SH.COUPONS);
+  // Параллельные appendRow в Google Таблице могут затирать друг друга (проверено испытанием 29.10):
+  // запись купона делаем под той же блокировкой, что и погашение. Случайные значения готовим заранее.
   var token = randToken_();
-  var code, codeHash, tries = 0;
-  do {
-    code = randCode_(8);
-    codeHash = hash_('c', code);
-    tries++;
-  } while (tries < 5 && findRow_(shC, C.C_CODE, codeHash));
   var id = 'K' + randCode_(6);
-  var now = now_();
-  var expires = st.COUPON_EXPIRES;
-  shC.appendRow([id, hash_('t', token), codeHash, now, expires, 'issued', '', '', '', source + (note ? ':' + note : '')]);
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return null;
+  try {
+    var shC = sheet_(SH.COUPONS);
+    var code, codeHash, tries = 0;
+    do {
+      code = randCode_(8);
+      codeHash = hash_('c', code);
+      tries++;
+    } while (tries < 5 && findRow_(shC, C.C_CODE, codeHash));
+    var now = now_();
+    var expires = st.COUPON_EXPIRES;
+    shC.appendRow([id, hash_('t', token), codeHash, now, expires, 'issued', '', '', '', source + (note ? ':' + note : '')]);
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
   return { id: id, token: token, code: code, codePretty: code.slice(0, 4) + '-' + code.slice(4), expires: expires };
 }
 
@@ -429,14 +443,19 @@ function normCode_(s) {
 
 /* ============================ Таблица ============================ */
 
+var SS_CACHE = null, SHEET_CACHE = {};
 function ss_() {
+  if (SS_CACHE) return SS_CACHE;
   var id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
-  return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+  SS_CACHE = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+  return SS_CACHE;
 }
 
 function sheet_(name) {
+  if (SHEET_CACHE[name]) return SHEET_CACHE[name];
   var sh = ss_().getSheetByName(name);
   if (!sh) throw new Error('Нет листа ' + name);
+  SHEET_CACHE[name] = sh;
   return sh;
 }
 
@@ -449,8 +468,23 @@ function findRow_(sh, col, value) {
   return { row: r, values: sh.getRange(r, 1, 1, sh.getLastColumn()).getValues()[0] };
 }
 
+var DEFER_LOG = null;
 function log_(action, subject, operator, result, detail) {
+  if (DEFER_LOG) { DEFER_LOG.push([now_(), action, subject || '', operator || '', result || '', detail || '']); return; }
   try {
     sheet_(SH.LOG).appendRow([now_(), action, subject || '', operator || '', result || '', detail || '']);
   } catch (e) { /* журнал не должен ломать основную операцию */ }
+}
+
+function flushLog_() {
+  var rows = DEFER_LOG; DEFER_LOG = null;
+  if (!rows || !rows.length) return;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return; // журнал не важнее скорости выдачи
+  try {
+    var sh = sheet_(SH.LOG);
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    SpreadsheetApp.flush();
+  } catch (e) { /* журнал не должен ломать основную операцию */ }
+  finally { lock.releaseLock(); }
 }
