@@ -273,3 +273,16 @@ button:focus-visible,a:focus-visible {outline:3px solid var(--gold);outline-offs
 .stage-head{padding:14px 0 8px}
 .collected{margin-top:0}
 @media(max-height:760px){.game-stage .band{display:none}.game-stage .bubble{font-size:14px;line-height:1.38;padding:8px 11px}.collected span{height:22px;font-size:13px}.stage-title{font-size:23px}}
+
+/* Партнёры финальной страницы — 03.11.2026. */
+.partner-gifts{margin-top:22px}
+.partner-gifts-title{font:inherit;font-weight:700;font-size:20px;line-height:1.25;color:var(--red-dark);margin:0 0 8px}
+.partner-gifts .gift-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.partner-gifts .gift-card{min-width:0;padding:12px;gap:8px;background:#fff;text-align:center;align-items:center}
+.gift-logo-box{width:100%;height:112px;display:flex;align-items:center;justify-content:center;background:#fff}
+.gift-logo{display:block;max-width:100%;width:144px;height:104px;object-fit:contain}
+.partner-gifts .gift-card strong{font-size:14px;line-height:1.3}
+.partner-gifts .gift-card span{font-size:13px;line-height:1.45}
+@media(max-width:360px){.partner-gifts .gift-grid{gap:8px}.partner-gifts .gift-card{padding:9px}.gift-logo-box{height:96px}.gift-logo{height:90px}}
+
+.gift-logo-box.gift-logo-dark{background:#242424;border-radius:8px}

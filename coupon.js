@@ -46,15 +46,26 @@
     SERVER_ERROR: 'Сервер ответил ошибкой. Нажми «Повторить» чуть позже.'
   };
 
+  var PARTNERS = {
+    fazenda: { name: 'Пирожковая «Фазанда»', logo: 'partner-fazanda.jpg' },
+    dushechka: { name: 'Душечка', logo: 'partner-dushechka.jpg' },
+    amurmania: { name: 'АмурМания', logo: 'partner-amurmania.png' },
+    starscoffee: { name: 'Stars Coffee', logo: 'partner-starscoffee.png' }
+  };
+  var PARTNER_ORDER = ['fazenda', 'dushechka', 'amurmania', 'starscoffee'];
+
   function offersHtml(c) {
-    var list = (c.offers || []).filter(function (o) { return o.available; });
+    var list = (c.offers || []).filter(function (o) { return o.available && PARTNERS[o.id]; });
     if (!c.offers) return '';
     if (!list.length) {
       return '<p class="coupon-warn">Сейчас подарков нет ни у одного резидента. Если организатор их пополнит, купон сработает.</p>';
     }
-    return '<p class="coupon-sub">Выбери один подарок у любого резидента:</p><div class="gift-grid">' + list.map(function (o) {
-      return '<div class="gift-card"><strong>' + h(o.name) + '</strong><span>' + h(o.gift) + '</span></div>';
-    }).join('') + '</div>';
+    list.sort(function (a, b) { return PARTNER_ORDER.indexOf(a.id) - PARTNER_ORDER.indexOf(b.id); });
+    return '<section class="partner-gifts" aria-label="Подарки партнёров"><h2 class="partner-gifts-title">Выбери свой подарок</h2>' +
+      '<p class="coupon-sub">Один купон — один подарок у одного из партнёров.</p><div class="gift-grid">' + list.map(function (o) {
+      var partner = PARTNERS[o.id];
+      return '<div class="gift-card"><div class="gift-logo-box' + (o.id === 'starscoffee' ? ' gift-logo-dark' : '') + '"><img class="gift-logo" src="' + partner.logo + '" alt="Логотип ' + h(partner.name) + '" width="144" height="104"></div><strong>' + h(partner.name) + '</strong><span>' + h(o.gift) + '</span></div>';
+    }).join('') + '</div></section>';
   }
 
   function view() {
