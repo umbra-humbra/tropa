@@ -64,7 +64,7 @@
     return '<section class="partner-gifts" aria-label="Подарки партнёров"><h2 class="partner-gifts-title">Выбери свой подарок</h2>' +
       '<p class="coupon-sub">Один купон — один подарок у одного из партнёров.</p><div class="gift-grid">' + list.map(function (o) {
       var partner = PARTNERS[o.id];
-      return '<div class="gift-card"><div class="gift-logo-box' + (o.id === 'starscoffee' ? ' gift-logo-dark' : '') + '"><img class="gift-logo" src="' + partner.logo + '" alt="Логотип ' + h(partner.name) + '" width="144" height="104"></div><strong>' + h(partner.name) + '</strong><span>' + h(o.gift) + '</span></div>';
+      return '<div class="gift-card"><div class="gift-logo-box' + (o.id === 'starscoffee' ? ' gift-logo-stars' : '') + '"><img class="gift-logo" src="' + partner.logo + '" alt="Логотип ' + h(partner.name) + '" width="144" height="104"></div><strong>' + h(partner.name) + '</strong><span>' + h(o.gift) + '</span></div>';
     }).join('') + '</div></section>';
   }
 

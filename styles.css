@@ -285,4 +285,5 @@ button:focus-visible,a:focus-visible {outline:3px solid var(--gold);outline-offs
 .partner-gifts .gift-card span{font-size:13px;line-height:1.45}
 @media(max-width:360px){.partner-gifts .gift-grid{gap:8px}.partner-gifts .gift-card{padding:9px}.gift-logo-box{height:96px}.gift-logo{height:90px}}
 
-.gift-logo-box.gift-logo-dark{background:#242424;border-radius:8px}
+.gift-logo-box.gift-logo-stars{background:#fff}
+.gift-logo-stars .gift-logo{width:clamp(50px,40%,56px);height:auto;aspect-ratio:1}
