@@ -47,7 +47,7 @@
       info = r;
       $('resident').textContent = r.residentName;
       paintCounter();
-      if (!started) gate('Вы — ' + r.residentName + '.\nПодарок: ' + r.gift + '.\n\n' + (r.rules || ''), { start: true });
+      if (!started) gate('Вы — ' + r.residentName + '.\n\n' + (r.rules || ''), { start: true });
     }, function () {
       gate('Нет связи с сервером.\nПроверьте мобильный интернет и нажмите «Повторить».', { retry: true });
     });
