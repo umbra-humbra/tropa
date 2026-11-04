@@ -47,7 +47,7 @@
   };
 
   var PARTNERS = {
-    fazenda: { name: 'Пирожковая «Фазанда»', logo: 'partner-fazanda.jpg' },
+    fazenda: { name: 'Фазанда', logo: 'partner-fazanda.jpg' },
     dushechka: { name: 'Душечка', logo: 'partner-dushechka.jpg' },
     amurmania: { name: 'АмурМания', logo: 'partner-amurmania.png' },
     starscoffee: { name: 'Stars Coffee', logo: 'partner-starscoffee.png' }
@@ -97,7 +97,11 @@
       '</div>';
   }
 
-  function paint() { if (host && document.body.contains(host)) host.innerHTML = view(); }
+  function followHtml() {
+    return '<div class="max-follow not-print"><a class="primary max-follow-button" href="https://max.ru/join/Nvq3iIv1AhP3HFaETWFt-rymrt68pbd1OnKoSBVyKi0" target="_blank" rel="noopener noreferrer">Подписаться на «Амурские сезоны» в MAX</a></div>';
+  }
+
+  function paint() { if (host && document.body.contains(host)) host.innerHTML = view() + followHtml(); }
 
   function issue() {
     if (issuing || current()) return;

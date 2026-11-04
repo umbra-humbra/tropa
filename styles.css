@@ -288,3 +288,6 @@ button:focus-visible,a:focus-visible {outline:3px solid var(--gold);outline-offs
 .gift-logo-box.gift-logo-stars{background:#fff}
 .partner-gifts .gift-logo-box{height:120px}
 .gift-logo-stars .gift-logo,.gift-logo[src="partner-fazanda.jpg"]{width:min(80px,66.666%);height:auto;aspect-ratio:1}
+
+.max-follow{margin:18px 0 22px;text-align:center}
+.max-follow-button{display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;text-decoration:none;line-height:1.4}
